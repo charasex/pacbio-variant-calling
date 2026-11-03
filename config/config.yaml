@@ -1,0 +1,5 @@
+samples: "config/samples.tsv"
+datadir: "/work/project/AtlasG2P/data/raw"
+start_from_bam: False
+aligners:
+    - minimap2

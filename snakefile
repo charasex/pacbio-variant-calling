@@ -16,11 +16,10 @@ import pandas as pd
 
 samples = pd.read_csv(config["samples"], sep="\t", dtype=str).fillna("")
 
-# Columns only used when starting from pre-aligned BAM files. They are optional so
-# that sample sheets written for the FASTQ entry point keep working unchanged.
-for optional_column in ["bam_minimap2", "bam_ngmlr", "fastq"]:
-    if optional_column not in samples.columns:
-        samples[optional_column] = ""
+
+if "fastq" not in sample.column:
+    samples["fastq"] = ""
+    print("need to entry data of fastq in sample.tsv file")
 
 samples = samples.set_index("sample_name", drop=False).sort_index()
 
