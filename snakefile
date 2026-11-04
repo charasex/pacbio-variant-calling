@@ -111,7 +111,7 @@ localrules:
 
 
 include: "common.smk"
-include: "rules/common.smk"
+include: "workflow/rules/common.smk"
 include: "rules/data_download.smk"
 
 
