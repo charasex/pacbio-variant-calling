@@ -1,5 +1,6 @@
 samples: "config/samples.tsv"
 datadir: "/home/ichninak/work/data/"
+ref: "/home/ichninak/work/data/Acestrorhynchus_falcatus/genome/"
 start_from_bam: False
 aligners:
     - minimap2

@@ -4,7 +4,7 @@ rule minimap2:
     """
     input:
         fastq="{wdir}/{sample}/fastq/{genome}_filtered.fastq.gz",
-        fasta="{wdir}/genome/{genome}.fna",
+        fasta="{wdir}/genome/{genome}.fasta",
         html=lambda wildcards: run_qc_files(wildcards, "fastqc/{run}_sra_fastqc.html"),
         qczip=lambda wildcards: run_qc_files(wildcards, "fastqc/{run}_sra_fastqc.zip"),
         nanoplot=lambda wildcards: run_qc_files(
