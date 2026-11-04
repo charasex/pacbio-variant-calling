@@ -1,3 +1,2 @@
 sample_name genome  fastq
-echantillon_1   genome  chemin
-echantillon_2   genome  chemin
+m84087_260430_152709_s4   Acestrorhynchus_falcatus  data/Acestrorhynchus_falcatus/read/m84087_260430_152709_s4.hifi_reads.bc2046.fastq.gz
