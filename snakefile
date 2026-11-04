@@ -112,7 +112,7 @@ localrules:
 
 include: "common.smk"
 include: "workflow/rules/common.smk"
-include: "rules/data_download.smk"
+include: "workflow/rules/data_download.smk"
 
 
 if bam_mode:
