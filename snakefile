@@ -17,7 +17,7 @@ import pandas as pd
 samples = pd.read_csv(config["samples"], sep="\t", dtype=str).fillna("")
 
 
-if "fastq" not in samples.column:
+if "fastq" not in samples.columns:
     samples["fastq"] = ""
     print("need to entry data of fastq in sample.tsv file")
 
