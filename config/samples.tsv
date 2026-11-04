@@ -1,2 +1,2 @@
-sample_name genome  fastq
-m84087_260430_152709_s4 Acestrorhynchus_falcatus    data/Acestrorhynchus_falcatus/read/m84087_260430_152709_s4.hifi_reads.bc2046.fastq.gz
+sample_name	genome	fastq
+m84087_260430_152709_s4	Acestrorhynchus_falcatus	data/Acestrorhynchus_falcatus/read/m84087_260430_152709_s4.hifi_reads.bc2046.fastq.gz
