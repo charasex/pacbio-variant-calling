@@ -15,3 +15,4 @@ chopper_minlength: 500 # Sets a minimum read length [default: 500 bp]
 chopper_quality: 10 # Sets a minimum Phred average quality score [default: 10]
 chopper_tailcrop: 0 # Trim N nucleotides from the end of a read [default: 0]
 
+seed: 42
