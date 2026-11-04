@@ -122,18 +122,18 @@ if bam_mode:
 
 else:
 
-    include: "rules/data_qc.smk"
-    include: "rules/mapping.smk"
+    include: "workflow/rules/data_qc.smk"
+    include: "workflow/rules/mapping.smk"
 
 
 # Alignment-level QC runs in both input modes.
-include: "rules/mapping_qc.smk"
-include: "rules/ensemblecalling.smk"
-include: "rules/merging.smk"
-include: "rules/genotyping.smk"
-include: "rules/report.smk"
-include: "rules/mappability.smk"
-include: "rules/annotate.smk"
+include: "workflow/rules/mapping_qc.smk"
+include: "workflow/rules/ensemblecalling.smk"
+include: "workflow/rules/merging.smk"
+include: "workflow/rules/genotyping.smk"
+include: "workflow/rules/report.smk"
+include: "workflow/rules/mappability.smk"
+include: "workflow/rules/annotate.smk"
 
 
 rule all:
