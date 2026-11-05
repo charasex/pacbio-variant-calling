@@ -69,9 +69,9 @@ rule filter_reads_chopper:
     conda:
         "../envs/chopper.yaml"
     log:
-        "{wdir}/{genome}/logs/filter_reads_chopper.log",
+        "{wdir}/{genome}/logs/{sample}_filter_reads_chopper.log",
     benchmark:
-        "{wdir}/{genome}/benchmarks/filter_reads_chopper.tsv"
+        "{wdir}/{genome}/benchmarks/{sample}_filter_reads_chopper.tsv"
     params:
         chopper_quality=config["chopper_quality"],
         chopper_minlength=config["chopper_minlength"],
