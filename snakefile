@@ -24,7 +24,7 @@ if "fastq" not in samples.columns:
 samples = samples.set_index("sample_name", drop=False).sort_index()
 
 # One reference genome per sample sheet. Each individual is processed on its own, in
-# its own {wdir}/{sample}/ directory; only the reference and its derived files are shared.
+# its own {wdir}/{genome}/ directory; only the reference and its derived files are shared.
 genomes = sorted(set(samples["genome"]))
 if len(genomes) != 1:
     raise WorkflowError(
@@ -106,6 +106,9 @@ localrules:
     all,
 
 include: "workflow/rules/data_qc.smk"
+include: "workflow/rules/mapping_qc.smk"
+include: "workflow/rules/mapping.smk"
+
 #include: "common.smk"
 #include: "workflow/rules/common.smk"
 #include: "workflow/rules/data_download.smk"
@@ -132,34 +135,34 @@ include: "workflow/rules/data_qc.smk"
 # include: "workflow/rules/annotate.smk"
 
 
-# rule all:
-#     input:
-#         per_individual("{wdir}/{sample}/{genome}_final.vcf.gz"),
-#         per_individual("{wdir}/{sample}/{genome}_final_light.vcf.gz"),
-#         # Per-callset genotyped VCFs, bgzipped by rule gzip_genotype once the final VCF exists.
-#         per_individual(
-#             "{wdir}/{sample}/genotype/{genome}_{aligner}_{caller}_genotype.vcf.gz",
-#             aligner=aligners,
-#             caller=CALLERS,
-#         ),
-#         per_individual("{wdir}/{sample}/{genome}_finalQC.html"),
-#         per_individual(
-#             "{wdir}/{sample}/samplot/{aligner}_{genome}/{svtype}/index.html",
-#             aligner=aligners,
-#             svtype=["DUP", "INV", "DEL"],
-#         ),
-#         per_individual(
-#             "{wdir}/{sample}/calling_QC/{aligner}_{caller}_QC_{genome}/variant_count.jpg",
-#             aligner=aligners,
-#             caller=PLOT_CALLERS,
-#         ),
-#         per_individual(
-#             "{wdir}/{sample}/callability/{genome}_{aligner}_callable_mappable.bed",
-#             aligner=aligners,
-#         ),
-#         per_individual("{wdir}/{sample}/callability/{genome}_callable_mappable.bed"),
-#         per_individual("{wdir}/{sample}/annotate_grm/{genome}_grm.jl"),
-#         per_individual(
-#             "{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
-#             aligner=aligners,
-#         ),
+rule all:
+    input:
+        per_individual("{wdir}/{sample}/{genome}_final.vcf.gz"),
+        per_individual("{wdir}/{sample}/{genome}_final_light.vcf.gz"),
+        # Per-callset genotyped VCFs, bgzipped by rule gzip_genotype once the final VCF exists.
+        per_individual(
+            "{wdir}/{sample}/genotype/{genome}_{aligner}_{caller}_genotype.vcf.gz",
+            aligner=aligners,
+            caller=CALLERS,
+        ),
+        per_individual("{wdir}/{sample}/{genome}_finalQC.html"),
+        per_individual(
+            "{wdir}/{sample}/samplot/{aligner}_{genome}/{svtype}/index.html",
+            aligner=aligners,
+            svtype=["DUP", "INV", "DEL"],
+        ),
+        per_individual(
+            "{wdir}/{sample}/calling_QC/{aligner}_{caller}_QC_{genome}/variant_count.jpg",
+            aligner=aligners,
+            caller=PLOT_CALLERS,
+        ),
+        per_individual(
+            "{wdir}/{sample}/callability/{genome}_{aligner}_callable_mappable.bed",
+            aligner=aligners,
+        ),
+        per_individual("{wdir}/{sample}/callability/{genome}_callable_mappable.bed"),
+        per_individual("{wdir}/{sample}/annotate_grm/{genome}_grm.jl"),
+        per_individual(
+            "{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
+            aligner=aligners,
+        ),

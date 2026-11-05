@@ -14,28 +14,28 @@ rule samtools_stats:
     Mapping QC
     """
     input:
-        bam="{wdir}/{sample}/bam/{genome}_{aligner}_sorted.bam",
-        bai="{wdir}/{sample}/bam/{genome}_{aligner}_sorted.bam.bai",
+        bam="{wdir}/{genome}/bam/{genome}_{aligner}_sorted.bam",
+        bai="{wdir}/{genome}/bam/{genome}_{aligner}_sorted.bam.bai",
     output:
-        stats="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_mapping.stats",
-        stattsv="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_mapping.stats.tsv",
-        plot="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_mapping_plot.html",
+        stats="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_mapping.stats",
+        stattsv="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_mapping.stats.tsv",
+        plot="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_mapping_plot.html",
     conda:
         "../envs/samtools.yaml"
     log:
-        "{wdir}/{sample}/logs/{genome}_{aligner}.samtools_stats.log",
+        "{wdir}/{genome}/logs/{aligner}.samtools_stats.log",
     benchmark:
-        "{wdir}/{sample}/benchmarks/{genome}_{aligner}.samtools_stats.tsv"
+        "{wdir}/{genome}/benchmarks/{aligner}.samtools_stats.tsv"
     params:
         wdir=wdir,
         genome=genome,
     shell:
         """
-        mkdir -p {params.wdir}/{wildcards.sample}/mapping_QC
+        mkdir -p {params.wdir}/{wildcards.genome}/mapping_QC
         samtools stats {input.bam} > {output.stats}
         cat {output.stats} | grep ^SN | cut -f 2- > {output.stattsv}
         # QC visualization
-        plot-bamstats -p {params.wdir}/{wildcards.sample}/mapping_QC/{params.genome}_{wildcards.aligner}_mapping_plot {output.stats}
+        plot-bamstats -p {params.wdir}/{wildcards.genome}/mapping_QC/{params.genome}_{wildcards.aligner}_mapping_plot {output.stats}
         """
 
 
@@ -44,18 +44,18 @@ rule samtools_coverage:
     Mapping coverage along the genome
     """
     input:
-        bam="{wdir}/{sample}/bam/{genome}_{aligner}_sorted.bam",
-        bai="{wdir}/{sample}/bam/{genome}_{aligner}_sorted.bam.bai",
+        bam="{wdir}/{genome}/bam/{genome}_{aligner}_sorted.bam",
+        bai="{wdir}/{genome}/bam/{genome}_{aligner}_sorted.bam.bai",
     output:
-        coverage="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
-        coverage_hist="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage_hist.txt",
-        coverage_depth="{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage_depthplot.txt",
+        coverage="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_coverage.tsv",
+        coverage_hist="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_coverage_hist.txt",
+        coverage_depth="{wdir}/{genome}/mapping_QC/{genome}_{aligner}_coverage_depthplot.txt",
     conda:
         "../envs/samtools_coverage.yaml"
     log:
-        "{wdir}/{sample}/logs/{genome}_{aligner}.samtools_coverage.log",
+        "{wdir}/{genome}/logs/{aligner}.samtools_coverage.log",
     benchmark:
-        "{wdir}/{sample}/benchmarks/{genome}_{aligner}.samtools_coverage.tsv"
+        "{wdir}/{genome}/benchmarks/{aligner}.samtools_coverage.tsv"
     shell:
         """
         # store coverage in a tsv/tab-separated file

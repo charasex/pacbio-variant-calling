@@ -18,24 +18,24 @@ def rows_of(sample):
     return samples[samples["sample_name"] == sample]
 
 
-def runs_of(sample):
-    """SRA runs of one individual. Empty cells are possible in start_from_bam mode."""
-    return [run for run in rows_of(sample)["sra"] if run]
+# def runs_of(sample):
+#     """SRA runs of one individual. Empty cells are possible in start_from_bam mode."""
+#     return [run for run in rows_of(sample)["sra"] if run]
 
 
-def run_qc_files(wildcards, pattern):
-    """Per-run QC files of one individual, required before its reads are aligned."""
-    return expand(
-        f"{{wdir}}/{{sample}}/{pattern}",
-        wdir=wildcards.wdir,
-        sample=wildcards.sample,
-        run=runs_of(wildcards.sample),
-    )
+# def run_qc_files(wildcards, pattern):
+#     """Per-run QC files of one individual, required before its reads are aligned."""
+#     return expand(
+#         f"{{wdir}}/{{sample}}/{pattern}",
+#         wdir=wildcards.wdir,
+#         sample=wildcards.sample,
+#         run=runs_of(wildcards.sample),
+#     )
 
 
-def per_individual(pattern, **wildcards):
-    """Expand a {wdir}/{sample}/ target for every individual in the sample sheet."""
-    return expand(pattern, wdir=wdir, genome=genome, sample=individuals, **wildcards)
+# def per_individual(pattern, **wildcards):
+#     """Expand a {wdir}/{sample}/ target for every individual in the sample sheet."""
+#     return expand(pattern, wdir=wdir, genome=genome, sample=individuals, **wildcards)
 
 
 # Sequencing-technology presets. Each entry is an ordinary config key: the preset only
@@ -52,7 +52,6 @@ def per_individual(pattern, **wildcards):
 TECH_PRESETS = {
     "hifi": {
         "minimap_ax": "map-hifi",
-        "ngmlr_preset": "pacbio",
         "read_group_platform": "PACBIO",  # a SAM specification @RG PL value
         "max_cluster_bias_INS": 1000,
         "diff_ratio_merging_INS": 0.9,
@@ -62,7 +61,6 @@ TECH_PRESETS = {
     },
     "ont": {
         "minimap_ax": "map-ont",
-        "ngmlr_preset": "ont",
         "read_group_platform": "ONT",
         "max_cluster_bias_INS": 100,
         "diff_ratio_merging_INS": 0.3,
