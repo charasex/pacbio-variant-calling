@@ -42,8 +42,8 @@ rule longqc:
     input:
         fastq=lambda wildcards: samples.loc[wildcards.sample, "fastq"]
     output:
-        html="{wdir}/{sample}/longqc/QC_result.html"
-    outdir=directory("{wdir}/{sample}/longqc")
+        html="{wdir}/{sample}/longqc/QC_result.html",
+        directory("{wdir}/{sample}/longqc"),
     params:
         preset=config["longqc_preset"]
     threads: 8
