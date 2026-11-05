@@ -23,13 +23,12 @@ rule minimap2:
     params:
         minimap_ax=config["minimap_ax"],
         seed=config["seed"],
-        read_group_platform=config["read_group_platform"],
     shell:
         """
         minimap2 -ax {params.minimap_ax} --MD -2 \
         --seed {params.seed} --eqx \
         -t {resources.cpus_per_task} \
-        -R "@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}\\tPL:{params.read_group_platform}" \
+        -R "@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}" \
         --sam-hit-only {input.fasta} {input.fastq} > {output.sam}
         """
 
