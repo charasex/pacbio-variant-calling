@@ -25,7 +25,7 @@ localrules: all
 rule all:
     input:
         # 1. QC of reads 
-        expand("{wdir}/{genome}/longqc/QC_result.html", wdir=wdir, sample=individuals),
+        expand("{wdir}/{genome}/longqc/QC_result.html", wdir=wdir, sample=individuals, genome=genome),
         # 2. BAM
         expand("{wdir}/{genome}/bam/{sample}_minimap2_sorted.bam.bai", wdir=wdir, sample=individuals, genome=genome),
         # 3. QC of mapping
