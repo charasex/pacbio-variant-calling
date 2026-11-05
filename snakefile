@@ -50,7 +50,7 @@ rule longqc:
         "{wdir}/{sample}/benchmarks/longqc.tsv"
     shell:
         """
-        python "$CONDA_PREFIX/share/LongQC/longQC.py" sampleqc \
+        python longQC.py sampleqc \
         -x {params.preset} \
         -p $(( {threads} < 4 ? 4 : {threads} )) \
         -o {output} \
