@@ -30,9 +30,9 @@ rule longqc:
     the error means that the process ran out of memory. This can be addressed by lowering the index parameter (-i/--index) for the minimap step. For my dataset lowering it from the default '4G' to '1G' (python3 longQC.py sampleqc -x pb-sequel -i 1G ... ) solved the issue.
     """
     input:
-        "{wdir}/read/{sample}.hifi_reads.bc2046.fastq.gz",
+        "{wdir}/{genome}/read/{sample}.hifi_reads.bc2046.fastq.gz",
     output:
-        directory("{wdir}/{sample}/longqc"),
+        directory("{wdir}/{genome}/longqc"),
     threads: workflow.cores
     conda:
         "../envs/longqc.yaml"
