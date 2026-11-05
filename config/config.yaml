@@ -26,3 +26,6 @@ mosdepth_windows_size: 1000
 mappability_min: 1 #regions of the genome with mappability less than this will be removed from callable sites bed file
 mappability_k: 150 #the kmer used to compute mappability with genmap; you should not need to change this except in special cases
 mappability_merge: 100 # merge passing mappability regions separated by this or fewer bp into a single region
+
+
+longqc_preset: pb-hifi # LongQC -x preset (pb-rs2, pb-sequel, pb-hifi, ont-ligation, ont-rapid, ont-1dsq). Leave commented to use the sequencing_technology preset (hifi -> pb-hifi, ont -> ont-ligation)

@@ -1,31 +1,6 @@
-rule fastqc:
-    """
-    Report data quality for long reads, one SRA run at a time
-    """
-    input:
-        "{wdir}/{sample}/fastq/{run}_sra.fastq.gz",
-    output:
-        html="{wdir}/{sample}/fastqc/{run}_sra_fastqc.html",
-        qczip="{wdir}/{sample}/fastqc/{run}_sra_fastqc.zip",
-    threads: workflow.cores
-    conda:
-        "../envs/fastqc.yaml"
-    log:
-        "{wdir}/{sample}/logs/{run}.fastqc.log",
-    benchmark:
-        "{wdir}/{sample}/benchmarks/{run}.fastqc.tsv"
-    params:
-        outdir=lambda wildcards, output: os.path.dirname(output.html),
-    shell:
-        """
-        mkdir -p {params.outdir}
-        fastqc --threads {resources.cpus_per_task} --outdir {params.outdir}/ {input} &> {log}
-        """
-
-
 rule longqc:
     """
-    Long-read quality control with LongQC, one SRA run at a time.
+    Long-read quality control with LongQC, one SRA ?????? run at a time.
 
     LongQC: Fukasawa et al. (2020) G3: Genes, Genomes, Genetics 10(4):1193-1196.
     sampleqc gives read length, quality, GC content, low-complexity masking, coverage
@@ -55,170 +30,26 @@ rule longqc:
     the error means that the process ran out of memory. This can be addressed by lowering the index parameter (-i/--index) for the minimap step. For my dataset lowering it from the default '4G' to '1G' (python3 longQC.py sampleqc -x pb-sequel -i 1G ... ) solved the issue.
     """
     input:
-        "{wdir}/{sample}/fastq/{run}_sra.fastq.gz",
+        "{wdir}/read/{sample}.hifi_reads.bc2046.fastq.gz",
     output:
-        directory("{wdir}/{sample}/longqc/{run}"),
+        directory("{wdir}/{sample}/longqc"),
     threads: workflow.cores
     conda:
         "../envs/longqc.yaml"
     log:
-        "{wdir}/{sample}/logs/{run}.longqc.log",
+        "{wdir}/{genome}/logs/longqc.log",
     benchmark:
-        "{wdir}/{sample}/benchmarks/{run}.longqc.tsv"
+        "{wdir}/{genome}/benchmarks/longqc.tsv"
     params:
         longqc_preset=config["longqc_preset"],
     shell:
         """
-        rm -rf {output} || true
         python "$CONDA_PREFIX/share/LongQC/longQC.py" sampleqc \
         -x {params.longqc_preset} \
         -p $(( {threads} < 4 ? 4 : {threads} )) \
         -o {output} \
         --index 1G \
         {input} &> {log}
-        """
-
-
-rule hifiadapterfilt:
-    """
-    Remove PacBio HiFi reads that contain adapter sequences, one SRA run at a time.
-    Only used when sequencing_technology is hifi (see rule merge_fastq).
-
-    HiFiAdapterFilt: Sim et al. (2022) BMC Genomics 23:157,
-    https://doi.org/10.1186/s12864-022-08375-1
-    Reads with a BLAST match to the PacBio adapter or primer sequences are removed
-    as whole reads; no bases are trimmed from the remaining reads.
-    -l      Minimum adapter match length to remove a read [default: 44]
-    -m      Minimum adapter match percentage to remove a read [default: 97]
-    -t      Number of threads for blastn
-
-    hifiadapterfilt.sh looks for its input as ${{prefix}}*.f*q* in the current
-    directory. It runs in a private work directory, so that no other file can match.
-    """
-    input:
-        "{wdir}/{sample}/fastq/{run}_sra.fastq.gz",
-    output:
-        filt_fastq=temp("{wdir}/{sample}/fastq/{run}_sra.filt.fastq.gz"),
-        stats="{wdir}/{sample}/hifiadapterfilt/{run}.stats",
-        blocklist="{wdir}/{sample}/hifiadapterfilt/{run}.blocklist",
-        blastout="{wdir}/{sample}/hifiadapterfilt/{run}.contaminant.blastout",
-    threads: workflow.cores
-    conda:
-        "../envs/hifiadapterfilt.yaml"
-    log:
-        "{wdir}/{sample}/logs/{run}.hifiadapterfilt.log",
-    benchmark:
-        "{wdir}/{sample}/benchmarks/{run}.hifiadapterfilt.tsv"
-    params:
-        hifiadapterfilt_min_length=config["hifiadapterfilt_min_length"],
-        hifiadapterfilt_min_match=config["hifiadapterfilt_min_match"],
-        workdir=lambda wildcards, output: os.path.join(
-            os.path.dirname(output.stats), f"{wildcards.run}_work"
-        ),
-    shell:
-        """
-        rm -rf {params.workdir} || true
-        mkdir -p {params.workdir}
-        ln -s "$(realpath {input})" {params.workdir}/{wildcards.run}.fastq.gz
-        log="$(realpath {log})"
-
-        ( cd {params.workdir} && hifiadapterfilt.sh \
-        -p {wildcards.run} \
-        -l {params.hifiadapterfilt_min_length} \
-        -m {params.hifiadapterfilt_min_match} \
-        -t {resources.cpus_per_task} \
-        -o . ) &> "$log"
-
-        mv {params.workdir}/{wildcards.run}.filt.fastq.gz {output.filt_fastq}
-        mv {params.workdir}/{wildcards.run}.stats {output.stats}
-        mv {params.workdir}/{wildcards.run}.blocklist {output.blocklist}
-        mv {params.workdir}/{wildcards.run}.contaminant.blastout {output.blastout}
-        rm -rf {params.workdir} || true
-        """
-
-
-rule porechop_abi:
-    """
-    Trim adapters from Oxford Nanopore reads, one SRA run at a time.
-    Only used when sequencing_technology is ont (see rule merge_fastq).
-
-    Porechop_ABI: "Porechop_ABI: discovering unknown adapters in Oxford Nanopore
-    Technology sequencing reads for downstream trimming", Bioinformatics Advances,
-    https://doi.org/10.1093/bioadv/vbac085
-    Adapters are trimmed from the read ends. A read with an adapter in its middle
-    (a probable chimera) is split at the adapter (default, --discard_middle not used).
-    --ab_initio     Infer the adapters from the reads, in addition to the Porechop
-                    adapter database (config key porechop_ab_initio)
-    -tmp            Temporary directory, one per run (the default ./tmp is shared)
-    -t              Number of threads
-
-    --ab_initio samples reads at random and has no seed option, so the inferred
-    adapters can differ between two runs. The log records the inferred adapters.
-    """
-    input:
-        "{wdir}/{sample}/fastq/{run}_sra.fastq.gz",
-    output:
-        trimmed_fastq=temp("{wdir}/{sample}/fastq/{run}_sra.porechop.fastq.gz"),
-    threads: workflow.cores
-    conda:
-        "../envs/porechop_abi.yaml"
-    log:
-        "{wdir}/{sample}/logs/{run}.porechop_abi.log",
-    benchmark:
-        "{wdir}/{sample}/benchmarks/{run}.porechop_abi.tsv"
-    params:
-        ab_initio="--ab_initio" if config_flag("porechop_ab_initio") else "",
-        tmpdir="{wdir}/{sample}/porechop_abi/{run}_tmp",
-    shell:
-        """
-        rm -rf {params.tmpdir} || true
-        mkdir -p {params.tmpdir}
-        porechop_abi -i {input} \
-        -o {output.trimmed_fastq} \
-        {params.ab_initio} \
-        -tmp {params.tmpdir} \
-        -t {resources.cpus_per_task} \
-        --format fastq.gz \
-        -v 1 &> {log}
-        rm -rf {params.tmpdir} || true
-        """
-
-
-rule nanoplot:
-    """
-    Quality control of raw data
-    """
-    input:
-        fastq="{wdir}/{sample}/fastq/{run}_sra.fastq.gz",
-        html="{wdir}/{sample}/fastqc/{run}_sra_fastqc.html",
-        qczip="{wdir}/{sample}/fastqc/{run}_sra_fastqc.zip",
-    output:
-        "{wdir}/{sample}/nanoplot/{run}_NanoStats.txt",
-        # "{wdir}/{sample}/nanoplot/{run}_LengthvsQualityScatterPlot_dot.html",
-        # "{wdir}/{sample}/nanoplot/{run}_LengthvsQualityScatterPlot_dot.png",
-        # "{wdir}/{sample}/nanoplot/{run}_LengthvsQualityScatterPlot_kde.html",
-        # "{wdir}/{sample}/nanoplot/{run}_LengthvsQualityScatterPlot_kde.png",
-        "{wdir}/{sample}/nanoplot/{run}_NanoPlot-report.html",
-        "{wdir}/{sample}/nanoplot/{run}_Non_weightedHistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot/{run}_Non_weightedHistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot/{run}_Non_weightedLogTransformed_HistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot/{run}_Non_weightedLogTransformed_HistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot/{run}_WeightedHistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot/{run}_WeightedHistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot/{run}_WeightedLogTransformed_HistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot/{run}_WeightedLogTransformed_HistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot/{run}_Yield_By_Length.html",
-        # "{wdir}/{sample}/nanoplot/{run}_Yield_By_Length.png"
-    threads: workflow.cores
-    conda:
-        "../envs/nanoplot.yaml"
-    log:
-        "{wdir}/{sample}/logs/{run}_nanoplot.log",
-    benchmark:
-        "{wdir}/{sample}/benchmarks/{run}.nanoplot.tsv"
-    shell:
-        """
-        NanoPlot --fastq {input.fastq} -t {resources.cpus_per_task} --tsv_stats --outdir {wildcards.wdir}/{wildcards.sample}/nanoplot/ --prefix '{wildcards.run}_' --N50 --no_static --verbose --title {wildcards.run} &> {log}
         """
 
 
@@ -232,15 +63,15 @@ rule filter_reads_chopper:
     --tailcrop      Trim N nucleotides from the end of a read
     """
     input:
-        reads="{wdir}/{sample}/fastq/{genome}.fastq.gz",
+        reads="{wdir}/{genome}/read/{sample}.hifi_reads.bc2046.fastq.gz",
     output:
-        filtered_reads=temp("{wdir}/{sample}/fastq/{genome}_filtered.fastq.gz"),
+        filtered_reads=temp("{wdir}/{genome}/read/{sample}_filtered.fastq.gz"),
     conda:
         "../envs/chopper.yaml"
     log:
-        "{wdir}/{sample}/logs/{genome}.filter_reads_chopper.log",
+        "{wdir}/{genome}/logs/filter_reads_chopper.log",
     benchmark:
-        "{wdir}/{sample}/benchmarks/{genome}.filter_reads_chopper.tsv"
+        "{wdir}/{genome}/benchmarks/filter_reads_chopper.tsv"
     params:
         chopper_quality=config["chopper_quality"],
         chopper_minlength=config["chopper_minlength"],
@@ -259,36 +90,41 @@ rule filter_reads_chopper:
         """
 
 
-rule nanoplot_after_filtering:
-    """
-    Quality control after filtering long reads
-    """
-    input:
-        fastq="{wdir}/{sample}/fastq/{genome}_filtered.fastq.gz",
-    output:
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_NanoStats.txt",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_dot.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_dot.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_kde.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_kde.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_NanoPlot-report.html",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedHistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedHistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedLogTransformed_HistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedLogTransformed_HistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedHistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedHistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedLogTransformed_HistogramReadlength.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedLogTransformed_HistogramReadlength.png",
-        "{wdir}/{sample}/nanoplot_filtered/{genome}_Yield_By_Length.html",
-        # "{wdir}/{sample}/nanoplot_filtered/{genome}_Yield_By_Length.png"
-    conda:
-        "../envs/nanoplot.yaml"
-    log:
-        "{wdir}/{sample}/logs/{genome}_nanoplot_filtered.log",
-    benchmark:
-        "{wdir}/{sample}/benchmarks/{genome}.nanoplot_after_filtering.tsv"
-    shell:
-        """
-        NanoPlot --fastq {input.fastq} -t {resources.cpus_per_task} --tsv_stats --outdir {wildcards.wdir}/{wildcards.sample}/nanoplot_filtered/ --prefix '{wildcards.genome}_' --N50 --no_static --verbose --title {wildcards.sample} &> {log}
-        """
+
+# rule nanoplot_after_filtering:
+#     """
+#     Quality control after filtering long reads
+#     """
+#     input:
+#         fastq="{wdir}/{sample}/fastq/{genome}_filtered.fastq.gz",
+#     output:
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_NanoStats.txt",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_dot.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_dot.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_kde.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_LengthvsQualityScatterPlot_kde.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_NanoPlot-report.html",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedHistogramReadlength.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedHistogramReadlength.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedLogTransformed_HistogramReadlength.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_Non_weightedLogTransformed_HistogramReadlength.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedHistogramReadlength.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedHistogramReadlength.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedLogTransformed_HistogramReadlength.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_WeightedLogTransformed_HistogramReadlength.png",
+#         "{wdir}/{sample}/nanoplot_filtered/{genome}_Yield_By_Length.html",
+#         # "{wdir}/{sample}/nanoplot_filtered/{genome}_Yield_By_Length.png"
+#     conda:
+#         "../envs/nanoplot.yaml"
+#     log:
+#         "{wdir}/{sample}/logs/{genome}_nanoplot_filtered.log",
+#     benchmark:
+#         "{wdir}/{sample}/benchmarks/{genome}.nanoplot_after_filtering.tsv"
+#     shell:
+#         """
+#         NanoPlot --fastq {input.fastq} -t {resources.cpus_per_task} --tsv_stats --outdir {wildcards.wdir}/{wildcards.sample}/nanoplot_filtered/ --prefix '{wildcards.genome}_' --N50 --no_static --verbose --title {wildcards.sample} &> {log}
+#         """
+
+
+
+

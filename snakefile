@@ -43,9 +43,6 @@ for individual in individuals:
             "and '-'.".format(individual, config["samples"])
         )
 
-# SRA runs. Several runs can belong to one individual; their reads are merged per
-# individual, never across individuals.
-sra_runs = sorted(set(r for r in samples["sra"] if r))
 
 wdir = f"{config['datadir']}{genome}"
 
@@ -57,12 +54,12 @@ wdir = f"{config['datadir']}{genome}"
 #
 # CALLERS is the set merged by rule jasmine. It is deliberately not the three-caller list
 # in rule all, which is the sniffles2plot QC set (DeBreak has no such plot).
-ALIGNERS = ("minimap2", "ngmlr")
-CALLERS = ("sniffles", "svim", "cutesv", "debreak")
+ALIGNERS = ("minimap2")
+#CALLERS = ("sniffles", "svim", "cutesv", "debreak")
 
 # The callers rule sniffles2plot can draw. sniffles2_plot cannot read DeBreak's VCF, so
 # the calling_QC plots cover three of the four callers.
-PLOT_CALLERS = ("svim", "cutesv", "sniffles")
+#PLOT_CALLERS = ("svim", "cutesv", "sniffles")
 
 # Which aligners to run (config key `aligners`). One is allowed: it halves the cost of the
 # run, at the price of the cross-aligner agreement the ensemble is built on (see README).
@@ -88,18 +85,17 @@ if not requested_aligners:
 aligners = [a for a in ALIGNERS if a in requested_aligners]
 
 # Every aligner + caller pair whose callset enters rule jasmine, aligner-major.
-callsets = [(aligner, caller) for aligner in aligners for caller in CALLERS]
+#callsets = [(aligner, caller) for aligner in aligners for caller in CALLERS]
 
 # Input mode. When True, the SRA download, read QC and alignment stages are replaced
 # by staging user-supplied, pre-aligned BAM files (one per aligner) and their reads.
-bam_mode = bool(config.get("start_from_bam", False))
+#bam_mode = bool(config.get("start_from_bam", False))
 
 
 wildcard_constraints:
     wdir=wdir,
     genome=genome,
     sample="|".join(re.escape(i) for i in individuals),
-    run="|".join(re.escape(r) for r in sra_runs) if sra_runs else "__no_sra_run__",
     aligner="|".join(aligners),
 
 
@@ -109,61 +105,61 @@ wildcard_constraints:
 localrules:
     all,
 
-
-include: "common.smk"
-include: "workflow/rules/common.smk"
-include: "workflow/rules/data_download.smk"
-
-
-if bam_mode:
-
-    # Pre-aligned BAMs are staged at the canonical path; read QC and alignment are skipped.
-    include: "rules/bam_input.smk"
-
-else:
-
-    include: "workflow/rules/data_qc.smk"
-    include: "workflow/rules/mapping.smk"
+include: "workflow/rules/data_qc.smk"
+#include: "common.smk"
+#include: "workflow/rules/common.smk"
+#include: "workflow/rules/data_download.smk"
 
 
-# Alignment-level QC runs in both input modes.
-include: "workflow/rules/mapping_qc.smk"
-include: "workflow/rules/ensemblecalling.smk"
-include: "workflow/rules/merging.smk"
-include: "workflow/rules/genotyping.smk"
-include: "workflow/rules/report.smk"
-include: "workflow/rules/mappability.smk"
-include: "workflow/rules/annotate.smk"
+# if bam_mode:
+
+#     # Pre-aligned BAMs are staged at the canonical path; read QC and alignment are skipped.
+#     include: "rules/bam_input.smk"
+
+# else:
+
+#     include: "workflow/rules/data_qc.smk"
+#     include: "workflow/rules/mapping.smk"
 
 
-rule all:
-    input:
-        per_individual("{wdir}/{sample}/{genome}_final.vcf.gz"),
-        per_individual("{wdir}/{sample}/{genome}_final_light.vcf.gz"),
-        # Per-callset genotyped VCFs, bgzipped by rule gzip_genotype once the final VCF exists.
-        per_individual(
-            "{wdir}/{sample}/genotype/{genome}_{aligner}_{caller}_genotype.vcf.gz",
-            aligner=aligners,
-            caller=CALLERS,
-        ),
-        per_individual("{wdir}/{sample}/{genome}_finalQC.html"),
-        per_individual(
-            "{wdir}/{sample}/samplot/{aligner}_{genome}/{svtype}/index.html",
-            aligner=aligners,
-            svtype=["DUP", "INV", "DEL"],
-        ),
-        per_individual(
-            "{wdir}/{sample}/calling_QC/{aligner}_{caller}_QC_{genome}/variant_count.jpg",
-            aligner=aligners,
-            caller=PLOT_CALLERS,
-        ),
-        per_individual(
-            "{wdir}/{sample}/callability/{genome}_{aligner}_callable_mappable.bed",
-            aligner=aligners,
-        ),
-        per_individual("{wdir}/{sample}/callability/{genome}_callable_mappable.bed"),
-        per_individual("{wdir}/{sample}/annotate_grm/{genome}_grm.jl"),
-        per_individual(
-            "{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
-            aligner=aligners,
-        ),
+# # Alignment-level QC runs in both input modes.
+# include: "workflow/rules/mapping_qc.smk"
+# include: "workflow/rules/ensemblecalling.smk"
+# include: "workflow/rules/merging.smk"
+# include: "workflow/rules/genotyping.smk"
+# include: "workflow/rules/report.smk"
+# include: "workflow/rules/mappability.smk"
+# include: "workflow/rules/annotate.smk"
+
+
+# rule all:
+#     input:
+#         per_individual("{wdir}/{sample}/{genome}_final.vcf.gz"),
+#         per_individual("{wdir}/{sample}/{genome}_final_light.vcf.gz"),
+#         # Per-callset genotyped VCFs, bgzipped by rule gzip_genotype once the final VCF exists.
+#         per_individual(
+#             "{wdir}/{sample}/genotype/{genome}_{aligner}_{caller}_genotype.vcf.gz",
+#             aligner=aligners,
+#             caller=CALLERS,
+#         ),
+#         per_individual("{wdir}/{sample}/{genome}_finalQC.html"),
+#         per_individual(
+#             "{wdir}/{sample}/samplot/{aligner}_{genome}/{svtype}/index.html",
+#             aligner=aligners,
+#             svtype=["DUP", "INV", "DEL"],
+#         ),
+#         per_individual(
+#             "{wdir}/{sample}/calling_QC/{aligner}_{caller}_QC_{genome}/variant_count.jpg",
+#             aligner=aligners,
+#             caller=PLOT_CALLERS,
+#         ),
+#         per_individual(
+#             "{wdir}/{sample}/callability/{genome}_{aligner}_callable_mappable.bed",
+#             aligner=aligners,
+#         ),
+#         per_individual("{wdir}/{sample}/callability/{genome}_callable_mappable.bed"),
+#         per_individual("{wdir}/{sample}/annotate_grm/{genome}_grm.jl"),
+#         per_individual(
+#             "{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
+#             aligner=aligners,
+#         ),
