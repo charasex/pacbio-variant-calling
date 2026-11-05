@@ -50,8 +50,9 @@ rule longqc:
         "{wdir}/{sample}/benchmarks/longqc.tsv"
     shell:
         """
-        python longQC.py sampleqc \
-        -x {params.preset} \
+        rm -rf {output} || true
+        longqc sampleqc \
+        -x {params.longqc_preset} \
         -p $(( {threads} < 4 ? 4 : {threads} )) \
         -o {output} \
         --index 1G \
