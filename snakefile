@@ -1,168 +1,33 @@
-"""
-Pipeline for calling and genotyping Structural Variants from long-read sequencing
-"""
-
 import os
 import re
-
+import pandas as pd
 from snakemake.exceptions import WorkflowError
-
 
 configfile: "config/config.yaml"
 
-
-# Import sample config (sample name, sra accession)
-import pandas as pd
-
+# Import et validation des échantillons
 samples = pd.read_csv(config["samples"], sep="\t", dtype=str).fillna("")
-
-
 if "fastq" not in samples.columns:
-    samples["fastq"] = ""
-    print("need to entry data of fastq in sample.tsv file")
+    raise WorkflowError("La colonne 'fastq' est absente de config/samples.tsv")
 
 samples = samples.set_index("sample_name", drop=False).sort_index()
 
-# One reference genome per sample sheet. Each individual is processed on its own, in
-# its own {wdir}/{genome}/ directory; only the reference and its derived files are shared.
 genomes = sorted(set(samples["genome"]))
 if len(genomes) != 1:
-    raise WorkflowError(
-        "All individuals in {} must use the same reference genome. Found: {}.".format(
-            config["samples"], ", ".join("'{}'".format(g) for g in genomes)
-        )
-    )
+    raise WorkflowError(f"Tous les échantillons doivent partager le même génome de référence. Trouvé : {genomes}")
 genome = genomes[0]
 
 individuals = sorted(set(samples["sample_name"]))
-for individual in individuals:
-    # The name becomes a directory name and a VCF sample name.
-    if not re.fullmatch(r"[A-Za-z0-9._-]+", individual):
-        raise WorkflowError(
-            "Invalid sample_name '{}' in {}. Use only letters, digits, '.', '_' "
-            "and '-'.".format(individual, config["samples"])
-        )
-
-
 wdir = f"{config['datadir']}{genome}"
 
-# The aligners and callers the workflow knows, in a canonical order that must not be
-# reshuffled. Jasmine writes one SUPP_VEC bit per input VCF, in the order the VCFs are
-# listed (rules/merging.smk), workflow/scripts/vcf_to_tsv.sh writes the tool column names
-# in that same order, and both workflow/scripts/finalQC.Rmd and merging_qc.R decode bit i
-# as tool column i. `callsets` below is the single definition of that order.
-#
-# CALLERS is the set merged by rule jasmine. It is deliberately not the three-caller list
-# in rule all, which is the sniffles2plot QC set (DeBreak has no such plot).
-ALIGNERS = ("minimap2")
-#CALLERS = ("sniffles", "svim", "cutesv", "debreak")
-
-# The callers rule sniffles2plot can draw. sniffles2_plot cannot read DeBreak's VCF, so
-# the calling_QC plots cover three of the four callers.
-#PLOT_CALLERS = ("svim", "cutesv", "sniffles")
-
-# Which aligners to run (config key `aligners`). One is allowed: it halves the cost of the
-# run, at the price of the cross-aligner agreement the ensemble is built on (see README).
-requested_aligners = config.get("aligners", list(ALIGNERS))
-if isinstance(requested_aligners, str):
-    # `--config aligners=minimap2,ngmlr` arrives as a string, not a list.
-    requested_aligners = [a.strip() for a in requested_aligners.split(",") if a.strip()]
-unknown_aligners = [a for a in requested_aligners if a not in ALIGNERS]
-if unknown_aligners:
-    raise WorkflowError(
-        "Unknown aligner(s) {} in config key 'aligners'. Supported values are: {}.".format(
-            ", ".join("'{}'".format(a) for a in unknown_aligners), ", ".join(ALIGNERS)
-        )
-    )
-if not requested_aligners:
-    raise WorkflowError(
-        "Config key 'aligners' is empty. Select at least one of: {}.".format(
-            ", ".join(ALIGNERS)
-        )
-    )
-# Deduplicated and put back into ALIGNERS order, so the SUPP_VEC bit order does not depend
-# on how the config file happens to be written.
-aligners = [a for a in ALIGNERS if a in requested_aligners]
-
-# Every aligner + caller pair whose callset enters rule jasmine, aligner-major.
-#callsets = [(aligner, caller) for aligner in aligners for caller in CALLERS]
-
-# Input mode. When True, the SRA download, read QC and alignment stages are replaced
-# by staging user-supplied, pre-aligned BAM files (one per aligner) and their reads.
-#bam_mode = bool(config.get("start_from_bam", False))
-
-
-wildcard_constraints:
-    wdir=wdir,
-    genome=genome,
-    sample="|".join(re.escape(i) for i in individuals),
-    aligner="|".join(aligners),
-
-
-# `all` is a pure aggregation target with no shell command; it must never be submitted
-# to a scheduler. Declaring it local is also what lets .test/test_profiles.py exclude it
-# from the per-rule resource coverage check on a principled basis.
-localrules:
-    all,
-
-include: "workflow/rules/data_qc.smk"
-include: "workflow/rules/mapping_qc.smk"
-include: "workflow/rules/mapping.smk"
-
-#include: "common.smk"
-#include: "workflow/rules/common.smk"
-#include: "workflow/rules/data_download.smk"
-
-
-# if bam_mode:
-
-#     # Pre-aligned BAMs are staged at the canonical path; read QC and alignment are skipped.
-#     include: "rules/bam_input.smk"
-
-# else:
-
-#     include: "workflow/rules/data_qc.smk"
-#     include: "workflow/rules/mapping.smk"
-
-
-# # Alignment-level QC runs in both input modes.
-# include: "workflow/rules/mapping_qc.smk"
-# include: "workflow/rules/ensemblecalling.smk"
-# include: "workflow/rules/merging.smk"
-# include: "workflow/rules/genotyping.smk"
-# include: "workflow/rules/report.smk"
-# include: "workflow/rules/mappability.smk"
-# include: "workflow/rules/annotate.smk"
-
+localrules: all
 
 rule all:
     input:
-        per_individual("{wdir}/{sample}/{genome}_final.vcf.gz"),
-        per_individual("{wdir}/{sample}/{genome}_final_light.vcf.gz"),
-        # Per-callset genotyped VCFs, bgzipped by rule gzip_genotype once the final VCF exists.
-        per_individual(
-            "{wdir}/{sample}/genotype/{genome}_{aligner}_{caller}_genotype.vcf.gz",
-            aligner=aligners,
-            caller=CALLERS,
-        ),
-        per_individual("{wdir}/{sample}/{genome}_finalQC.html"),
-        per_individual(
-            "{wdir}/{sample}/samplot/{aligner}_{genome}/{svtype}/index.html",
-            aligner=aligners,
-            svtype=["DUP", "INV", "DEL"],
-        ),
-        per_individual(
-            "{wdir}/{sample}/calling_QC/{aligner}_{caller}_QC_{genome}/variant_count.jpg",
-            aligner=aligners,
-            caller=PLOT_CALLERS,
-        ),
-        per_individual(
-            "{wdir}/{sample}/callability/{genome}_{aligner}_callable_mappable.bed",
-            aligner=aligners,
-        ),
-        per_individual("{wdir}/{sample}/callability/{genome}_callable_mappable.bed"),
-        per_individual("{wdir}/{sample}/annotate_grm/{genome}_grm.jl"),
-        per_individual(
-            "{wdir}/{sample}/mapping_QC/{genome}_{aligner}_coverage.tsv",
-            aligner=aligners,
-        ),
+        # 1. QC of reads 
+        expand("{wdir}/{sample}/longqc/QC_result.html", wdir=wdir, sample=individuals),
+        # 2. BAM
+        expand("{wdir}/{sample}/bam/{genome}_minimap2_sorted.bam.bai", wdir=wdir, sample=individuals, genome=genome),
+        # 3. QC of mapping
+        expand("{wdir}/{sample}/mapping_QC/{genome}_minimap2_stats.txt", wdir=wdir, sample=individuals, genome=genome),
+        expand("{wdir}/{sample}/mapping_QC/{genome}_minimap2_coverage.tsv", wdir=wdir, sample=individuals, genome=genome)
