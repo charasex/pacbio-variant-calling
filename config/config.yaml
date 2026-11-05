@@ -5,6 +5,8 @@ start_from_bam: False
 aligners:
     - minimap2
 
+minimap_ax: map-hifi
+
 hifiadapterfilt_min_length: 44 # Minimum adapter match length to remove a read [default: 44]
 hifiadapterfilt_min_match: 97 
 
