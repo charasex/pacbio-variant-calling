@@ -1,2 +1,2 @@
-sample_name	genome	fastq	sra
-m84087_260430_152709_s4	Acestrorhynchus_falcatus	/home/ichninak/work/data/Acestrorhynchus_falcatus/read/m84087_260430_152709_s4.hifi_reads.bc2046.fastq.gz
+sample_name	genome	fastq
+m84087_260329_012819_s4	Leporinus_fasciatus	/home/ichninak/work/data/Leporinus_fasciatus/read/m84087_260329_012819_s4.fastq.gz

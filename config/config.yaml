@@ -8,3 +8,10 @@ seed: 42
 
 # LongQC preset (ex. pb-hifi, ont-ligation)
 longqc_preset: "pb-hifi"
+
+# setting for bcftools mpileup
+minMQ: 2 # Minimum mapping quality for an alignment to be used [0]
+minBQ: 13 # Minimum base quality for a base to be considered [13]
+# for different tools of assembly choose the correct one
+configTools: "pacbio-ccs-1.20" # use "illumina" if its illumina, or "ultima", or "ont-sup"
+

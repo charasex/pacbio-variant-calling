@@ -1,1 +1,3 @@
 # Profile for the SLURM job scheduler.
+use-conda: true
+conda-create-env-args: "--config channel_priority strict"
