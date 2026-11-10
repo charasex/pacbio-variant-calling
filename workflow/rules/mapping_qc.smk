@@ -33,3 +33,4 @@ rule samtools_coverage:
         "{wdir}/{sample}/logs/{genome}_samtools_coverage.log"
     shell:
         "samtools coverage {input.bam} -o {output} 2> {log}"
+

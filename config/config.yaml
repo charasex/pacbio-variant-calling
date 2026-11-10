@@ -1,13 +1,14 @@
 samples: "config/samples.tsv"
 datadir: "/home/ichninak/work/data/"
-ref: "/home/ichninak/work/data/Acestrorhynchus_falcatus/genome/Acestrorhynchus_falcatus.fasta"
+primary_haplotype: "hap1"
+
 
 # Paramètres Minimap2 (ex. map-hifi pour PacBio HiFi, map-ont pour Oxford Nanopore)
 minimap_ax: "map-hifi"
 seed: 42
 
-# LongQC preset (ex. pb-hifi, ont-ligation)
-longqc_preset: "pb-hifi"
+# QC and Mosdepth parameters
+mosdepth_windows_size: 10000
 
 # setting for bcftools mpileup
 minMQ: 2 # Minimum mapping quality for an alignment to be used [0]

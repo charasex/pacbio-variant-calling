@@ -2,7 +2,8 @@ rule minimap2:
     # Alignement des reads 
     input:
         fastq=lambda wildcards: samples.loc[wildcards.sample, "fastq"],
-        fasta=config["ref"],
+        ref="{wdir}/genome/{genome}.fasta",
+        nanoplot="{wdir}/{sample}/nanoplot/{sample}_NanoStats.txt"
     output:
         sam=temp("{wdir}/{sample}/bam/{genome}_minimap2.sam")
     params:
@@ -21,7 +22,7 @@ rule minimap2:
         --seed {params.seed} --eqx \
         -t {threads} \
         -R "@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}" \
-        --sam-hit-only {input.fasta} {input.fastq} > {output.sam} 2> {log}
+        --sam-hit-only {input.ref} {input.fastq} > {output.sam} 2> {log}
         """
 
 rule samtools_view:

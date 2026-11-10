@@ -1,6 +1,6 @@
 rule bcftools_mpileup:
     input:
-        ref=config["ref"],
+        ref="{wdir}/genome/{genome}.fasta",
         bam="{wdir}/{sample}/bam/{genome}_minimap2_sorted.bam",
         bai="{wdir}/{sample}/bam/{genome}_minimap2_sorted.bam.bai"
     output:
@@ -19,7 +19,7 @@ rule bcftools_mpileup:
     shell:
         """
         (bcftools mpileup --threads {threads} \
-        -q {params.minMQ} -Q {params.minBQ} \
-        -X {params.configtools} -Oz -f {input.ref} {input.bam} |\
+            -q {params.minMQ} -Q {params.minBQ} \
+            -X {params.configtools} -Oz -f {input.ref} {input.bam} | \
         bcftools call -mv -Oz -o {output.vcf}) 2> {log}
         """
