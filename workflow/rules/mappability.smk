@@ -16,11 +16,13 @@ rule mosdepth_summary:
         "{wdir}/{sample}/benchmarks/{genome}_mosdepth_summary.tsv"
     params:
         mosdepth_windows_size=config.get("mosdepth_windows_size", 10000),
-        prefix="{wdir}/{sample}/mapping_QC/{genome}_mosdepth"
+        prefix="{wdir}/{sample}/mapping_QC/{genome}_mosdepth",
+        minMQ=config["minMQ"]
     shell:
         """
         mosdepth --no-per-base \
             -t {threads} \
+            -Q {params.minMQ} \
             --by {params.mosdepth_windows_size} \
             {params.prefix} \
             {input.bam} 2> {log}

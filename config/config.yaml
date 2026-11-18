@@ -1,7 +1,7 @@
 samples: "config/samples.tsv"
 datadir: "/home/ichninak/work/data/"
 primary_haplotype: "hap1"
-
+ref_genome: "Metynnis_lippincottianus"
 
 # Paramètres Minimap2 (ex. map-hifi pour PacBio HiFi, map-ont pour Oxford Nanopore)
 minimap_ax: "map-hifi"
@@ -13,6 +13,17 @@ mosdepth_windows_size: 10000
 # setting for bcftools mpileup
 minMQ: 2 # Minimum mapping quality for an alignment to be used [0]
 minBQ: 13 # Minimum base quality for a base to be considered [13]
+minQUAL: 20
+DP: 10 # Minimum read depth for a variant to be considered
 # for different tools of assembly choose the correct one
 configTools: "pacbio-ccs-1.20" # use "illumina" if its illumina, or "ultima", or "ont-sup"
 
+# for ROH detection
+AFdefault: 0.4 # Default allele frequency for ROH detection
+G: 30 # Minimum number of consecutive homozygous SNPs to call a ROH
+max_het_rate: 0.0001 # max 1 SNP / 10kb
+merge_dist: 20000 # Fusionne deux blocs ROH séparés de moins de 20 kb
+min_roh_len: 100000 # Taille minimale d'une ROH conservée (100 kb)
+
+# for roh_viz 
+min_contig_len: 1000000 # N'affiche que les contigs >= 1 Mb pour garder un graphique lisible

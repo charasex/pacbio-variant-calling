@@ -41,10 +41,20 @@ rule all:
         expand("{wdir}/{sample}/mapping_QC/{genome}_mosdepth.mosdepth.summary.txt", wdir=wdir, sample=individuals, genome=haplotypes),
         expand("{wdir}/{sample}/mapping_QC/{genome}_mosdepth.regions.bed.gz", wdir=wdir, sample=individuals, genome=haplotypes),
         # 4. Variant calling uniquement sur l'haplotype principal
-        expand("{wdir}/{sample}/mpileup/{primary}_bcftools.vcf.gz", wdir=wdir, sample=individuals, primary=primary_haplotype)
+        expand("{wdir}/{sample}/mpileup/{primary}_bcftools.vcf.gz", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        expand("{wdir}/{sample}/mpileup/{primary}_bcftools.vcf.gz.csi", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        expand("{wdir}/{sample}/mpileup/{primary}_bcftools_allsites.vcf.gz", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        expand("{wdir}/{sample}/mpileup/{primary}_bcftools_allsites.vcf.gz.csi", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        # 5 . ROH detection 
+        expand("{wdir}/{sample}/roh/{primary}_roh_viz.html", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        # ROH via bcftools roh (avec sites invariants temporaires)
+        expand("{wdir}/{sample}/roh/{primary}_bcftools_roh_full.txt.gz", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        expand("{wdir}/{sample}/roh/{primary}_bcftools_roh_RG.txt", wdir=wdir, sample=individuals, primary=primary_haplotype),
+        expand("{wdir}/{sample}/roh/{primary}_bcftools_roh.bed", wdir=wdir, sample=individuals, primary=primary_haplotype)
 
 include: "workflow/rules/data_qc.smk"
 include: "workflow/rules/mapping.smk"
 include: "workflow/rules/mapping_qc.smk"
 include: "workflow/rules/mappability.smk"
 include: "workflow/rules/variant-calling.smk"
+include: "workflow/rules/roh.smk"
